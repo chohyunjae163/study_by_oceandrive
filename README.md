@@ -1,5 +1,4 @@
-# study_by_oceandrive
-study with oceandrive
+# study with oceandrive
 
 
 ## usefule links:
