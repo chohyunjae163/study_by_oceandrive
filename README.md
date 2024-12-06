@@ -1,5 +1,8 @@
 # study with oceandrive
-
+- read programming books
+- watch GDC videos
+- solve algo & ds puzzles
+- make programs
 
 ## usefule links:
 ### compile c program on Windows
