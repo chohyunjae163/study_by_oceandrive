@@ -48,6 +48,18 @@ typedef struct
 global_variable win32_offscreen_buffer GlobalBackBuffer;
 
 
+typedef struct
+{
+	u32 X;
+	u32 Y;
+	u32 Color;
+} Sand;
+
+//gameplay data
+static const u32 NumSand = 100;
+static u32 StartX = 320;
+static u32 StartY = 240;
+static u32 SandColor = 0xFFFFFF00;
 
 void* pBits = NULL;
 
@@ -136,7 +148,11 @@ int WINAPI WinMain(
 			
 	bitmap_header.biSize = sizeof(bitmap_info.bmiHeader);
 	bitmap_header.biWidth = WIDTH;
-	bitmap_header.biHeight = HEIGHT;
+	//The origin of a bottom-up DIB is the lower-left corner; 
+	//the origin of a top-down DIB is the upper-left corner. [...] 
+	//StretchDIBits creates a top-down image if the sign of the biHeight member of the BITMAPINFOHEADER 
+	//structure for the DIB is negative.
+	bitmap_header.biHeight = -HEIGHT;
 	bitmap_header.biPlanes = 1;
 	bitmap_header.biBitCount = BITS_PER_PIXEL;
 	bitmap_header.biCompression = BI_RGB;
@@ -160,7 +176,7 @@ int WINAPI WinMain(
 	for (int y = 0; y < HEIGHT; ++y) {
 		u32* pixel = (u32*)row;
 		for (int x = 0; x < WIDTH; ++x) {
-			*pixel = 0x00000000;
+			*pixel = 0xFF000000;
 			
 			++pixel;
 		}
@@ -176,14 +192,33 @@ int WINAPI WinMain(
 	LARGE_INTEGER LastCounter;
 	QueryPerformanceCounter(&LastCounter);
 	bRunning = true;
-	u32 R = 0xFF0000FF;
-	u32 G = 0xFF00FF00;
-	u32 B = 0xFFFF0000;
-	u32 Colors[3];
-	Colors[0] = R;
-	Colors[1] = G;
-	Colors[2] = B;
-	u32 ColorIndex = 0;
+
+	//sand init
+	Sand Sands[100];
+	{
+		for (u32 i = 0; i < NumSand; ++i) {
+			Sands[i].X = StartX;
+			Sands[i].Y = StartY;
+			Sands[i].Color = SandColor;
+		} 
+	}
+	
+	//map
+	u32 Map[480][640];
+	for (int y = 0; y < HEIGHT; ++y) {
+		for (int x = 0; x < WIDTH; ++x) {
+			if (y > HEIGHT - 100) {
+				Map[y][x] = 0xFF0000FF;
+			}
+			else {
+				Map[y][x]  = 0xFF000000;
+			}
+			
+		}
+	}
+
+	u32 SandIndex = 0;
+
 	while (bRunning) {
 		while (PeekMessageA(&message, 0, 0, 0, PM_REMOVE)) {
 			if (!bRunning) {
@@ -195,18 +230,39 @@ int WINAPI WinMain(
 
 		//update 
 		{
+			
+			//sand update
+			for (u32 i = 0; i < NumSand; ++i) {
+				const u32 SimNum = HEIGHT;
+				for (u32 Sim = 0; Sim < SimNum; ++Sim) {
+					u32 X = Sands[i].X;
+					u32 Y = Sands[i].Y;
+					if (Map[Y + 1][X] == 0) {
+						Sands[i].Y += 1;
+					} else if (Map[Y + 1][X + 1] == 0) {
+						Sands[i].X += 1;
+					} else if (Map[Y + 1][X - 1] == 0) {
+						Sands[i].X -= 1;
+					}
+				}
+			} 
+
+			for (u32 i = 0; i < NumSand; ++i) {
+				u32 X = Sands[i].X;
+				u32 Y = Sands[i].Y;
+				Map[Y][X] = Sands[i].Color;
+			}
+
 			u8*row = (u8*)pBits;
 			for (int y = 0; y < HEIGHT; ++y) {
 				u32* pixel = (u32*)row;
 				for (int x = 0; x < WIDTH; ++x) {
-					*pixel = Colors[ColorIndex];
-			
+					*pixel = Map[y][x];
 					++pixel;
 				}
 				row += pitch;
 			}
 		}
-		ColorIndex++;
 
 		LARGE_INTEGER EndCounter;
 		QueryPerformanceCounter(&EndCounter);
@@ -232,7 +288,7 @@ int WINAPI WinMain(
 		f32 MSPerFrame = 1000.0f*(f32)CounterElapsed / (f32)PerfCountFrequency;
 		f32 FPS = (f32)(PerfCountFrequency / (f32)CounterElapsed);
 		char Buffer[256];
-		sprintf(Buffer, "%.02fms/f / %.02ff/s\n", MSPerFrame, FPS);
+		sprintf(Buffer, "%.02f ms/f / %.02f f/s\n", MSPerFrame, FPS);
 		OutputDebugStringA(Buffer);
 		LastCounter = EndCounter;
 
