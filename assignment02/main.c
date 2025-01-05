@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <wingdi.h>
 #include <stdint.h>
+#include <assert.h>
 
 const char WINDOW_CLASS_NAME[]  = "Fluid Pixel";
 static bool bRunning;
@@ -53,13 +54,16 @@ typedef struct
 	u32 X;
 	u32 Y;
 	u32 Color;
+	bool IsLive;
 } Sand;
 
 //gameplay data
 #define NUM_SAND 1000
+Sand Sands[NUM_SAND];
 static u32 StartX = 320;
 static u32 StartY = 240;
 static u32 SandColor = 0xFFFFFF00;
+static u32 NumSandLive = 0;
 
 void* pBits = NULL;
 
@@ -194,19 +198,33 @@ int WINAPI WinMain(
 	bRunning = true;
 
 	//sand init
-	Sand Sands[NUM_SAND];
+	
 	{
 		for (u32 i = 0; i < NUM_SAND; ++i) {
 			Sands[i].X = StartX;
 			Sands[i].Y = StartY;
 			Sands[i].Color = SandColor;
+			Sands[i].IsLive = false;
 		} 
 	}
-	
+
+	Sands[0].IsLive = true;
 
 
 	u32 SandIndex = 0;
-
+	//map
+	u32 Map[480][640];
+	for (int y = 0; y < HEIGHT; ++y) {
+		for (int x = 0; x < WIDTH; ++x) {
+			if (y > HEIGHT - 100) {
+				Map[y][x] = 0xFF0000FF;
+			}
+			else {
+				Map[y][x]  = 0xFF000000;
+			}
+			
+		}
+	}
 	while (bRunning) {
 		while (PeekMessageA(&message, 0, 0, 0, PM_REMOVE)) {
 			if (!bRunning) {
@@ -218,8 +236,34 @@ int WINAPI WinMain(
 
 		//update 
 		{
-			//map
-			u32 Map[480][640];
+
+			//sand update
+			const u32 SimNum = HEIGHT;
+
+			if (SandIndex < NUM_SAND) {
+				for (int i = 0; i < NUM_SAND; ++i) {
+					if (Sands[i].IsLive) {
+						u32 X = Sands[i].X;
+						u32 Y = Sands[i].Y;
+						if (Map[Y + 1][X] == 0xFF000000) {
+							Sands[i].Y += 1;
+							if (i == 1 && Sands[i].Y == 380) {
+								assert(false);
+							}
+						} else if (Map[Y + 1][X + 1] == 0xFF000000) {
+							Sands[i].Y += 1;
+							Sands[i].X += 1;
+						} else if (Map[Y + 1][X - 1] == 0xFF000000) {
+							Sands[i].Y += 1;
+							Sands[i].X -= 1;
+						}
+						else if (Map[Y + 1][X] == 0xFF0000FF) {
+						  //do nothing
+						}
+					}
+				}
+
+			}
 			for (int y = 0; y < HEIGHT; ++y) {
 				for (int x = 0; x < WIDTH; ++x) {
 					if (y > HEIGHT - 100) {
@@ -231,21 +275,6 @@ int WINAPI WinMain(
 			
 				}
 			}
-			//sand update
-			const u32 SimNum = HEIGHT;
-
-			if (SandIndex < NUM_SAND) {
-				u32 X = Sands[SandIndex].X;
-				u32 Y = Sands[SandIndex].Y;
-				if (Map[Y + 1][X] == 0xFF000000) {
-					Sands[SandIndex].Y += 1;
-				} else if (Map[Y + 1][X + 1] == 0xFF000000) {
-					Sands[SandIndex].X += 1;
-				} else if (Map[Y + 1][X - 1] == 0xFF000000) {
-					Sands[SandIndex].X -= 1;
-				}
-			}
-
 			for (u32 i = 0; i < NUM_SAND; ++i) {
 				u32 X = Sands[i].X;
 				u32 Y = Sands[i].Y;
@@ -314,6 +343,14 @@ LRESULT CALLBACK MainWindowCallback(
 	
 	LRESULT result = 0;
 	switch (message) {
+		case WM_KEYUP:
+			u32 VKCode = wParam;
+
+			if (VKCode == 'W')
+			{
+				Sands[++NumSandLive].IsLive = true;
+			} 
+			break;
 		case WM_DESTROY:
 			bRunning = false;
 			break;
