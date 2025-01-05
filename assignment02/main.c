@@ -56,7 +56,7 @@ typedef struct
 } Sand;
 
 //gameplay data
-static const u32 NumSand = 100;
+#define NUM_SAND 1000
 static u32 StartX = 320;
 static u32 StartY = 240;
 static u32 SandColor = 0xFFFFFF00;
@@ -186,7 +186,7 @@ int WINAPI WinMain(
 	
 	const u32 MonitorRefreshHz = 60;
 	const u32 GameUpdateHZ = MonitorRefreshHz / 2;
-	f32 TargetSecondsPerFrame = 1.0f;// / (f32)GameUpdateHZ;
+	f32 TargetSecondsPerFrame = 1.0f / (f32)GameUpdateHZ;
 
 	MSG message;
 	LARGE_INTEGER LastCounter;
@@ -194,28 +194,16 @@ int WINAPI WinMain(
 	bRunning = true;
 
 	//sand init
-	Sand Sands[100];
+	Sand Sands[NUM_SAND];
 	{
-		for (u32 i = 0; i < NumSand; ++i) {
+		for (u32 i = 0; i < NUM_SAND; ++i) {
 			Sands[i].X = StartX;
 			Sands[i].Y = StartY;
 			Sands[i].Color = SandColor;
 		} 
 	}
 	
-	//map
-	u32 Map[480][640];
-	for (int y = 0; y < HEIGHT; ++y) {
-		for (int x = 0; x < WIDTH; ++x) {
-			if (y > HEIGHT - 100) {
-				Map[y][x] = 0xFF0000FF;
-			}
-			else {
-				Map[y][x]  = 0xFF000000;
-			}
-			
-		}
-	}
+
 
 	u32 SandIndex = 0;
 
@@ -230,24 +218,35 @@ int WINAPI WinMain(
 
 		//update 
 		{
-			
-			//sand update
-			for (u32 i = 0; i < NumSand; ++i) {
-				const u32 SimNum = HEIGHT;
-				for (u32 Sim = 0; Sim < SimNum; ++Sim) {
-					u32 X = Sands[i].X;
-					u32 Y = Sands[i].Y;
-					if (Map[Y + 1][X] == 0) {
-						Sands[i].Y += 1;
-					} else if (Map[Y + 1][X + 1] == 0) {
-						Sands[i].X += 1;
-					} else if (Map[Y + 1][X - 1] == 0) {
-						Sands[i].X -= 1;
+			//map
+			u32 Map[480][640];
+			for (int y = 0; y < HEIGHT; ++y) {
+				for (int x = 0; x < WIDTH; ++x) {
+					if (y > HEIGHT - 100) {
+						Map[y][x] = 0xFF0000FF;
 					}
+					else {
+						Map[y][x]  = 0xFF000000;
+					}
+			
 				}
-			} 
+			}
+			//sand update
+			const u32 SimNum = HEIGHT;
 
-			for (u32 i = 0; i < NumSand; ++i) {
+			if (SandIndex < NUM_SAND) {
+				u32 X = Sands[SandIndex].X;
+				u32 Y = Sands[SandIndex].Y;
+				if (Map[Y + 1][X] == 0xFF000000) {
+					Sands[SandIndex].Y += 1;
+				} else if (Map[Y + 1][X + 1] == 0xFF000000) {
+					Sands[SandIndex].X += 1;
+				} else if (Map[Y + 1][X - 1] == 0xFF000000) {
+					Sands[SandIndex].X -= 1;
+				}
+			}
+
+			for (u32 i = 0; i < NUM_SAND; ++i) {
 				u32 X = Sands[i].X;
 				u32 Y = Sands[i].Y;
 				Map[Y][X] = Sands[i].Color;
