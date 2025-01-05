@@ -48,6 +48,11 @@ typedef struct
 
 global_variable win32_offscreen_buffer GlobalBackBuffer;
 
+typedef struct {
+	u32 X;
+	u32 Y;
+	u32 Radius;
+} Hole;
 
 typedef struct
 {
@@ -210,19 +215,17 @@ int WINAPI WinMain(
 
 	Sands[0].IsLive = true;
 
+	Hole HoleInGround;
+	HoleInGround.X = 320;
+	HoleInGround.Y = 330;
+	HoleInGround.Radius = 15;
 
 	u32 SandIndex = 0;
 	//map
 	u32 Map[480][640];
 	for (int y = 0; y < HEIGHT; ++y) {
 		for (int x = 0; x < WIDTH; ++x) {
-			if (y > HEIGHT - 100) {
-				Map[y][x] = 0xFF0000FF;
-			}
-			else {
-				Map[y][x]  = 0xFF000000;
-			}
-			
+			Map[y][x]  = 0xFF000000;
 		}
 	}
 	while (bRunning) {
@@ -247,9 +250,6 @@ int WINAPI WinMain(
 						u32 Y = Sands[i].Y;
 						if (Map[Y + 1][X] == 0xFF000000) {
 							Sands[i].Y += 1;
-							if (i == 1 && Sands[i].Y == 380) {
-								assert(false);
-							}
 						} else if (Map[Y + 1][X + 1] == 0xFF000000) {
 							Sands[i].Y += 1;
 							Sands[i].X += 1;
@@ -266,8 +266,16 @@ int WINAPI WinMain(
 			}
 			for (int y = 0; y < HEIGHT; ++y) {
 				for (int x = 0; x < WIDTH; ++x) {
-					if (y > HEIGHT - 100) {
-						Map[y][x] = 0xFF0000FF;
+					if (y > HEIGHT - 150) {
+						HoleInGround.X;
+						HoleInGround.Y;
+						u32 DistFromHole = (x - HoleInGround.X) * (x - HoleInGround.X) + (y - HoleInGround.Y) * (y - HoleInGround.Y);
+						if (DistFromHole > HoleInGround.Radius * HoleInGround.Radius) {
+							Map[y][x] = 0xFF0000FF;
+						} else {
+							Map[y][x]  = 0xFF000000;
+						}
+						
 					}
 					else {
 						Map[y][x]  = 0xFF000000;
@@ -276,6 +284,9 @@ int WINAPI WinMain(
 				}
 			}
 			for (u32 i = 0; i < NUM_SAND; ++i) {
+				if (!Sands[i].IsLive) {
+					continue;
+				}
 				u32 X = Sands[i].X;
 				u32 Y = Sands[i].Y;
 				Map[Y][X] = Sands[i].Color;
@@ -349,6 +360,15 @@ LRESULT CALLBACK MainWindowCallback(
 			if (VKCode == 'W')
 			{
 				Sands[++NumSandLive].IsLive = true;
+				Sands[NumSandLive].X = StartX;
+			}
+			if (VKCode == 'A')
+			{
+				StartX -= 1;
+			} 
+			if (VKCode == 'D')
+			{
+				StartX += 1;
 			} 
 			break;
 		case WM_DESTROY:
