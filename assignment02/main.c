@@ -43,6 +43,7 @@ typedef struct
 	void *Memory;
 	int Width;
 	int Height;
+	int Pitch;
 	int BytesPerPixel;
 } win32_offscreen_buffer;
 
@@ -79,7 +80,33 @@ LRESULT CALLBACK MainWindowCallback(
 	_In_ WPARAM wParam,
 	_In_ LPARAM lParam);
 
-void
+internal void
+Win32ResetBuffer(win32_offscreen_buffer *Buffer)
+{
+	if (Buffer->Memory) // Same as writing (BitmapMemory != 0) or (BitmapMemory != NULL)
+	{
+		VirtualFree(Buffer->Memory, 0, MEM_RELEASE);
+		// Optionally, you can check if the result of VirtualFree is not zero.
+		// Print out an error message if it is.
+	}
+    Buffer->Width = WIDTH;
+    Buffer->Height = HEIGHT;
+    Buffer->BytesPerPixel = 4;
+	Buffer->Pitch = Buffer->Width * Buffer->BytesPerPixel;
+    
+    Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
+    Buffer->Info.bmiHeader.biWidth = Buffer->Width;
+    Buffer->Info.bmiHeader.biHeight = -Buffer->Height; // negative value: top-down
+    Buffer->Info.bmiHeader.biPlanes = 1;
+    Buffer->Info.bmiHeader.biBitCount = 32;
+    Buffer->Info.bmiHeader.biCompression = BI_RGB;
+    
+    int BitmapMemorySize = Buffer->BytesPerPixel * (Buffer->Width * Buffer->Height);
+    
+	Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); 
+}
+
+internal void
 Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
 													 HDC DeviceContext, RECT ClientRect) {
 	int WindowWidth = ClientRect.right - ClientRect.left;
@@ -147,52 +174,6 @@ int WINAPI WinMain(
 
 	int MEM_SIZE = (WIDTH * HEIGHT) * PIXEL_BYTES;
 
-	RECT ClientRect;
-	GetClientRect(hWnd,&ClientRect);
-	int Width = ClientRect.right - ClientRect.left;
-	int Height = ClientRect.bottom - ClientRect.top;
-
-	BITMAPINFO bitmap_info = { 0 };
-	BITMAPINFOHEADER bitmap_header = { 0 };
-			
-	bitmap_header.biSize = sizeof(bitmap_info.bmiHeader);
-	bitmap_header.biWidth = WIDTH;
-	//The origin of a bottom-up DIB is the lower-left corner; 
-	//the origin of a top-down DIB is the upper-left corner. [...] 
-	//StretchDIBits creates a top-down image if the sign of the biHeight member of the BITMAPINFOHEADER 
-	//structure for the DIB is negative.
-	bitmap_header.biHeight = -HEIGHT;
-	bitmap_header.biPlanes = 1;
-	bitmap_header.biBitCount = BITS_PER_PIXEL;
-	bitmap_header.biCompression = BI_RGB;
-	bitmap_info.bmiHeader = bitmap_header;
-
-	pBits = VirtualAlloc(
-		NULL, //  If this parameter is NULL, the system determines where to allocate the region.
-		MEM_SIZE,
-		MEM_RESERVE | MEM_COMMIT,
-		PAGE_READWRITE
-	);
-
-	GlobalBackBuffer.Info = bitmap_info;
-	GlobalBackBuffer.Memory = pBits;
-	GlobalBackBuffer.Width = Width;
-	GlobalBackBuffer.Height = Height;
-	GlobalBackBuffer.BytesPerPixel = 4;
-
-	u32 pitch = WIDTH * BYTES_PER_PIXEL;
-	u8* row = (u8*)pBits;
-	for (int y = 0; y < HEIGHT; ++y) {
-		u32* pixel = (u32*)row;
-		for (int x = 0; x < WIDTH; ++x) {
-			*pixel = 0xFF000000;
-			
-			++pixel;
-		}
-		row += pitch;
-	}
-
-	
 	const u32 MonitorRefreshHz = 60;
 	const u32 GameUpdateHZ = MonitorRefreshHz / 2;
 	f32 TargetSecondsPerFrame = 1.0f / (f32)GameUpdateHZ;
@@ -228,6 +209,7 @@ int WINAPI WinMain(
 			Map[y][x]  = 0xFF000000;
 		}
 	}
+	
 	while (bRunning) {
 		while (PeekMessageA(&message, 0, 0, 0, PM_REMOVE)) {
 			if (!bRunning) {
@@ -292,14 +274,14 @@ int WINAPI WinMain(
 				Map[Y][X] = Sands[i].Color;
 			}
 
-			u8*row = (u8*)pBits;
+			u8*row = (u8*)GlobalBackBuffer.Memory;
 			for (int y = 0; y < HEIGHT; ++y) {
 				u32* pixel = (u32*)row;
 				for (int x = 0; x < WIDTH; ++x) {
 					*pixel = Map[y][x];
 					++pixel;
 				}
-				row += pitch;
+				row += GlobalBackBuffer.Pitch;
 			}
 		}
 
@@ -321,7 +303,9 @@ int WINAPI WinMain(
 
 		//render
 		HDC DeviceContext = GetDC(hWnd);
-		Win32DisplayBufferInWindow( &GlobalBackBuffer,DeviceContext,ClientRect);
+		RECT ClientRect;
+		GetClientRect(hWnd, &ClientRect);
+		Win32DisplayBufferInWindow(&GlobalBackBuffer,DeviceContext,ClientRect);
 		ReleaseDC(hWnd, DeviceContext);   
 
 		f32 MSPerFrame = 1000.0f*(f32)CounterElapsed / (f32)PerfCountFrequency;
@@ -354,6 +338,12 @@ LRESULT CALLBACK MainWindowCallback(
 	
 	LRESULT result = 0;
 	switch (message) {
+		case WM_SIZE:
+		{
+			Win32ResetBuffer(&GlobalBackBuffer);
+			break;
+		}
+			
 		case WM_KEYUP:
 			u32 VKCode = wParam;
 
