@@ -6,6 +6,7 @@
 */
 
 #include <windows.h>
+#include <windowsx.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <wingdi.h>
@@ -149,14 +150,26 @@ int WINAPI WinMain(
 
 		return 1;
 	}
-
+	
+	RECT rect;
+	rect.left   = 50;
+	rect.top    = 50;
+	rect.right  = rect.left + WIDTH;
+	rect.bottom = rect.top + HEIGHT;
+	AdjustWindowRectEx(
+		&rect,
+		WS_OVERLAPPEDWINDOW,
+		0,
+		0);
+	int AdjustedWidth =  rect.right - rect.left;
+	int AdjustedHeight = rect.bottom - rect.top;
 	HWND hWnd = CreateWindowA(
     WINDOW_CLASS_NAME,              // Window class
     "Learn to Program Windows",    // Window text
     WS_OVERLAPPEDWINDOW,            // Window style
 
     // Size and position
-    CW_USEDEFAULT, CW_USEDEFAULT, WIDTH, HEIGHT,
+    rect.left, rect.top, rect.right - rect.left, AdjustedHeight,
 
     NULL,       // Parent window    
     NULL,       // Menu
@@ -273,6 +286,9 @@ int WINAPI WinMain(
 				u32 Y = Sands[i].Y;
 				Map[Y][X] = Sands[i].Color;
 			}
+			
+			//draw mouse point
+			Map[StartY][StartX] = 0xFFFFFFFF;
 
 			u8*row = (u8*)GlobalBackBuffer.Memory;
 			for (int y = 0; y < HEIGHT; ++y) {
@@ -298,8 +314,6 @@ int WINAPI WinMain(
 			CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
 			SecondsElapsedForFrame =  (f32)CounterElapsed / (f32)PerfCountFrequency;
 		}
-
-
 
 		//render
 		HDC DeviceContext = GetDC(hWnd);
@@ -337,30 +351,43 @@ LRESULT CALLBACK MainWindowCallback(
 	_In_ LPARAM lParam) {
 	
 	LRESULT result = 0;
+	POINT MousePoint;
 	switch (message) {
 		case WM_SIZE:
 		{
 			Win32ResetBuffer(&GlobalBackBuffer);
 			break;
 		}
-			
-		case WM_KEYUP:
-			u32 VKCode = wParam;
-
-			if (VKCode == 'W')
-			{
-				Sands[++NumSandLive].IsLive = true;
-				Sands[NumSandLive].X = StartX;
-			}
-			if (VKCode == 'A')
-			{
-				StartX -= 1;
-			} 
-			if (VKCode == 'D')
-			{
-				StartX += 1;
-			} 
+		case WM_GETMINMAXINFO:
+		{
+			MINMAXINFO *minmax = (MINMAXINFO *)lParam;
+			minmax->ptMinTrackSize.x = WIDTH;
+			minmax->ptMinTrackSize.y = HEIGHT;
 			break;
+		}
+		case WM_MOUSEMOVE:
+		{
+			MousePoint.x = GET_X_LPARAM(lParam);
+			MousePoint.y = GET_Y_LPARAM(lParam);
+			RECT ClientRect;
+			GetClientRect(hWnd,&ClientRect);
+			int WindowWidth = ClientRect.right - ClientRect.left;
+			int WindowHeight = ClientRect.bottom - ClientRect.top;
+			int ClientToBufferWidthRatio = WindowWidth / WIDTH;
+			int ClientToBufferHeightRatio = WindowHeight / HEIGHT;
+			int PointXInBuffer = MousePoint.x / ClientToBufferWidthRatio; 
+			int PointYInBuffer = MousePoint.y / ClientToBufferHeightRatio;
+			StartX = PointXInBuffer;
+			StartY = PointYInBuffer;			
+			break;
+		}
+		case WM_LBUTTONDOWN:
+		{
+			Sands[++NumSandLive].IsLive = true;
+			Sands[NumSandLive].X = StartX;
+			Sands[NumSandLive].Y = StartY;
+			break;
+		}
 		case WM_DESTROY:
 			bRunning = false;
 			break;
