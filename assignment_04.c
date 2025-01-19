@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
 		max_price = strtol(argv[5],NULL,10);
 	}
 
-	printf("num stock: %d\n ",num_stock);
+	printf("num stock: %d\n",num_stock);
 	printf("num day: %d\n",num_day);
 	printf("num money: %d\n",num_money);
 	printf("\n");
