@@ -26,9 +26,9 @@ int main(int argc, char* argv[]) {
 				printf("*********  help page  *********\n");
 				printf("*******************************\n");
 				printf("*** this program outputs a text file, case.txt .\n");
-				printf("*** the text file has a bunch of numbers\n");
+				printf("*** the text file has a bunch of numbers which is a test case for the problem\n");
 				printf("*** https://www.acmicpc.net/problem/1231\n");
-				printf("*** arguments are not mandatory.\n");
+				printf("*** the arguments are not mandatory.\n");
 				printf("*** if you just run the program without arguments,\n");
 				printf("*** it will run with random values.\n\n");
 				printf("*** the random max values are \n");
