@@ -23,11 +23,19 @@ Pattern :: enum {None = 0, Blank = 2, Up = 4, Down = 8, Left = 16, Right = 32 }
 Direction :: enum{Up, Down, Left, Right}
 
 is_collapsed :: proc( options : u8) -> bool {
+	if( options == 0) {
+		return true
+	}
+
 	return (options & (options - 1)) == 0
 }
 
 pick_one_pattern :: proc(options : u8) -> u8 {
-	arr : [5]u8
+	if( options == 0 ) {
+		return 0
+	}
+
+	arr : [5]u8 = { 0..<5 = 0 }
 	len : i32 = 0
 
 	for cur : u8 = 2; cur <=32; cur *= 2 {
@@ -50,6 +58,15 @@ calc_power_of_two :: proc( num : u8 ) -> u8 {
 		power += 1
 	}
 	return power
+}
+
+get_no_collapsed :: proc(grid : [400]u8) -> i32 {
+	for i in 0..<NUM_ROW*NUM_COL {
+		if(is_collapsed(grid[i]) == false) {
+			return i32(i)
+		}
+	}
+	return -1
 }
 
 main :: proc() {
@@ -120,13 +137,22 @@ main :: proc() {
 	grids : [NUM_GRID]u8 = { 0..< NUM_GRID = default_options }
 	random_start_index := rl.GetRandomValue(NUM_ROW + 1,(NUM_ROW - 1) * (NUM_COL - 1) - 1)
 	cur_index := random_start_index
+
 	for i in 0..<NUM_GRID {
-		
+		fmt.println("cur_idx", cur_index)
+		if(is_collapsed(grids[cur_index])) {
+			cur_index = get_no_collapsed(grids)
+			if(cur_index == -1){
+				break;
+			}
+			fmt.println("new cur index ", cur_index)
+		}
+		fmt.println("options", grids[cur_index])
 		grids[ cur_index ] = pick_one_pattern(grids[ cur_index ])
 		pattern := Pattern(grids[ cur_index ])
 		indices : [4]i32 = { 0..<4 = -1 }
 		count_propagate := 0 
-		if(cur_index > 0 && is_collapsed(grids[ cur_index - 1]) == false )  {
+		if(cur_index % NUM_ROW != 0 && is_collapsed(grids[ cur_index - 1]) == false )  {
 			grids[ cur_index - 1] &= Rules[ pattern ][Direction.Left]
 			indices[count_propagate] = cur_index - 1
 			count_propagate += 1
@@ -158,9 +184,8 @@ main :: proc() {
 				min_index = idx;
 			}
 		}
-		cur_index = min_index		
+		cur_index = min_index
 	}
-
 
 	canvas := rl.GenImageColor(SCREEN_WIDTH,SCREEN_HEIGHT,rl.WHITE)
 	srcRec :=rl.Rectangle { 0, 0, PATTERN_SIZE,PATTERN_SIZE };
