@@ -117,26 +117,42 @@ main :: proc() {
 
 	rl.SetRandomSeed(u32(time.read_cycle_counter()))
 	default_options := u8(Pattern.Blank) + u8(Pattern.Up) + u8(Pattern.Down) + u8(Pattern.Left) + u8(Pattern.Right)
-	grids : [NUM_ROW * NUM_COL]u8
-	 for i := 0; i < NUM_ROW; i += 1 {
-		for j := 0; j < NUM_COL; j += 1 {
-			grids[j + i * NUM_ROW] = default_options;
-		}
-	}
+	NUM_GRID :: NUM_ROW * NUM_COL
+	grids : [NUM_GRID]u8 = { 0..< NUM_GRID = default_options }
 	random_start_index := rl.GetRandomValue(NUM_ROW + 1,(NUM_ROW - 1) * (NUM_COL - 1) - 1)
 	cur_index := random_start_index
-	for i in 0..=NUM_ROW*NUM_COL {
+	for i in 0..<NUM_GRID {
+		
 		grids[ cur_index ] = pick_one_pattern(default_options)
 		pattern := Pattern(grids[ cur_index ])
-		grids[ cur_index - 1] &= Rules[ pattern ][Direction.Left]
-		grids[ cur_index + 1] &= Rules[ pattern ][Direction.Right]
-		grids[ cur_index + NUM_COL] &= Rules[pattern][Direction.Down]
-		grids[ cur_index - NUM_COL] &= Rules[pattern][Direction.Up]
-
+		indices : [4]i32 = { 0..<4 = -1 }
+		count_propagate := 0 
+		if(cur_index > 0) {
+			grids[ cur_index - 1] &= Rules[ pattern ][Direction.Left]
+			indices[count_propagate] = cur_index- 1
+			count_propagate += 1
+		}
+		if(cur_index < NUM_GRID - 1) {
+			grids[ cur_index + 1] &= Rules[ pattern ][Direction.Right]
+			indices[count_propagate] = cur_index- 1
+			count_propagate += 1
+		}
+		if(cur_index < NUM_GRID - NUM_COL) {
+			grids[ cur_index + NUM_COL ] &= Rules[pattern][Direction.Down]
+			indices[count_propagate] = cur_index + NUM_COL
+			count_propagate += 1
+		}
+		if(cur_index >= NUM_COL) {
+			grids[ cur_index - NUM_COL ] &= Rules[pattern][Direction.Up]
+			indices[count_propagate] = cur_index - NUM_COL
+			count_propagate += 1
+		}
+		
 		min_num : u8 = 255
-
-		indices : [4]i32 = { cur_index- 1, cur_index + 1, cur_index + NUM_COL, cur_index - NUM_COL}
 		for idx in indices {
+			if(idx < 0) {
+				continue;
+			}
 			if ( min_num > grids[idx]) {
 				min_num = grids[idx]
 				cur_index = idx;
