@@ -71,6 +71,7 @@ main :: proc() {
 	AdjacentPatterns :: map[Direction]u8
 	blank := make(AdjacentPatterns)
 	defer delete(blank)
+	pattern_up := u8(Pattern.Up)
 	blank[Direction.Up] = u8(Pattern.Up)
 	blank[Direction.Down] = u8(Pattern.Down)
 	blank[Direction.Left] = u8(Pattern.Left)
@@ -113,22 +114,46 @@ main :: proc() {
 	Rules[Pattern.Right] = right
 	Rules[Pattern.Up] = up
 
+
 	rl.SetRandomSeed(u32(time.read_cycle_counter()))
 	default_options := u8(Pattern.Blank) + u8(Pattern.Up) + u8(Pattern.Down) + u8(Pattern.Left) + u8(Pattern.Right)
-	cur_index := rl.GetRandomValue(NUM_ROW + 1,(NUM_ROW - 1) * (NUM_COL - 1) - 1)
 	grids : [NUM_ROW * NUM_COL]u8
-	grids[ cur_index ] = pick_one_pattern(default_options)
-	pattern := Pattern(grids[ cur_index ])
-	grids[ cur_index - 1] &= Rules[ pattern ][Direction.Left]
-	grids[ cur_index + 1] &= Rules[ pattern ][Direction.Right]
-	grids[ cur_index + NUM_COL] &= Rules[pattern][Direction.Down]
-	grids[ cur_index - NUM_COL] &= Rules[pattern][Direction.Up]
+	 for i := 0; i < NUM_ROW; i += 1 {
+		for j := 0; j < NUM_COL; j += 1 {
+			grids[j + i * NUM_ROW] = default_options;
+		}
+	}
+	random_start_index := rl.GetRandomValue(NUM_ROW + 1,(NUM_ROW - 1) * (NUM_COL - 1) - 1)
+	cur_index := random_start_index
+	for i in 0..=NUM_ROW*NUM_COL {
+		grids[ cur_index ] = pick_one_pattern(default_options)
+		pattern := Pattern(grids[ cur_index ])
+		grids[ cur_index - 1] &= Rules[ pattern ][Direction.Left]
+		grids[ cur_index + 1] &= Rules[ pattern ][Direction.Right]
+		grids[ cur_index + NUM_COL] &= Rules[pattern][Direction.Down]
+		grids[ cur_index - NUM_COL] &= Rules[pattern][Direction.Up]
+
+		min_num : u8 = 255
+
+		indices : [4]i32 = { cur_index- 1, cur_index + 1, cur_index + NUM_COL, cur_index - NUM_COL}
+		for idx in indices {
+			if ( min_num > grids[idx]) {
+				min_num = grids[idx]
+				cur_index = idx;
+			}
+		}		
+	}
+
 
 	canvas := rl.GenImageColor(SCREEN_WIDTH,SCREEN_HEIGHT,rl.WHITE)
 	srcRec :=rl.Rectangle { 0, 0, PATTERN_SIZE,PATTERN_SIZE };
 
  	for i := 0; i < NUM_ROW; i += 1 {
 		for j := 0; j < NUM_COL; j += 1 {
+			if ( is_collapsed(grids[ j + i * NUM_ROW ]) == false)
+			{
+				continue;
+			}
 			image_index := calc_power_of_two(grids[ j + i * NUM_ROW ]) - 1
 			image := image_arr[image_index]
 			destRec := rl.Rectangle { f32(j * PATTERN_SIZE), f32(i * PATTERN_SIZE) , PATTERN_SIZE,PATTERN_SIZE }
@@ -140,7 +165,7 @@ main :: proc() {
 		}
 	}
 	FRAMEBUFFER := rl.LoadTextureFromImage(canvas)
-	//grids[cur_index] = pick_pattern(grids[cur_index])
+
 	
 	for !rl.WindowShouldClose() {
 
