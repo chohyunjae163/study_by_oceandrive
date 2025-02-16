@@ -11,16 +11,26 @@ down_path :: "../res/down.png"
 left_path :: "../res/left.png"
 right_path :: "../res/right.png"
 
-SCREEN_WIDTH :: 1280
-SCREEN_HEIGHT :: 720
+SCREEN_WIDTH :: 1000
+SCREEN_HEIGHT :: 1000
 
 PATTERN_SIZE :: 50
 
+NUM_ROW :: 20
+NUM_COL :: 20
+
+
+is_collapsed :: proc( options : u8) -> bool {
+	return (options & (options - 1)) == 0
+}
+
+Pattern :: enum {Blank = 2, Up = 4, Down = 8, Left = 16, Right = 32 }
+
 main :: proc() {
-	fmt.println("Hello World!")
+    // Initialization
+    //--------------------------------------------------------------------------------------
 	
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "wfc game")
-
  
 	blank_image := rl.LoadImage(blank_path)
 	up_image := rl.LoadImage(up_path)
@@ -36,6 +46,16 @@ main :: proc() {
 	rl.ImageDraw(&canvas,left_image,  srcRec, rl.Rectangle { 150,0,PATTERN_SIZE,PATTERN_SIZE },rl.WHITE)
 	rl.ImageDraw(&canvas,right_image, srcRec, rl.Rectangle { 200,0,PATTERN_SIZE,PATTERN_SIZE },rl.WHITE)
 	FRAMEBUFFER := rl.LoadTextureFromImage(canvas)
+
+
+	grids : [NUM_ROW * NUM_COL]u8
+	for i := 0; i < NUM_ROW; i += 1 {
+		for j := 0; j < NUM_COL; j += 1{
+			options := u8(Pattern.Blank) + u8(Pattern.Up) + u8(Pattern.Down) + u8(Pattern.Left) + u8(Pattern.Right)
+			grids[ j + i * NUM_ROW ] = options
+		}
+	} 
+
 
 	for !rl.WindowShouldClose() {
 
