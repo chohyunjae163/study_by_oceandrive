@@ -118,10 +118,11 @@ main :: proc() {
 	cur_index := rl.GetRandomValue(NUM_ROW + 1,(NUM_ROW - 1) * (NUM_COL - 1) - 1)
 	grids : [NUM_ROW * NUM_COL]u8
 	grids[ cur_index ] = pick_one_pattern(default_options)
-	grids[ cur_index - 1] &= Rules[ Pattern(grids[ cur_index ]) ][Direction.Left]
-	grids[ cur_index + 1] &= Rules[ Pattern(grids[ cur_index ]) ][Direction.Right]
-	grids[ cur_index + NUM_COL] &= Rules[Pattern(grids[ cur_index ])][Direction.Down]
-	grids[ cur_index - NUM_COL] &= Rules[Pattern(grids[ cur_index ])][Direction.Up]
+	pattern := Pattern(grids[ cur_index ])
+	grids[ cur_index - 1] &= Rules[ pattern ][Direction.Left]
+	grids[ cur_index + 1] &= Rules[ pattern ][Direction.Right]
+	grids[ cur_index + NUM_COL] &= Rules[pattern][Direction.Down]
+	grids[ cur_index - NUM_COL] &= Rules[pattern][Direction.Up]
 
 	canvas := rl.GenImageColor(SCREEN_WIDTH,SCREEN_HEIGHT,rl.WHITE)
 	srcRec :=rl.Rectangle { 0, 0, PATTERN_SIZE,PATTERN_SIZE };
