@@ -71,7 +71,6 @@ main :: proc() {
 	AdjacentPatterns :: map[Direction]u8
 	blank := make(AdjacentPatterns)
 	defer delete(blank)
-	pattern_up := u8(Pattern.Up)
 	blank[Direction.Up] = u8(Pattern.Up)
 	blank[Direction.Down] = u8(Pattern.Down)
 	blank[Direction.Left] = u8(Pattern.Left)
@@ -123,41 +122,43 @@ main :: proc() {
 	cur_index := random_start_index
 	for i in 0..<NUM_GRID {
 		
-		grids[ cur_index ] = pick_one_pattern(default_options)
+		grids[ cur_index ] = pick_one_pattern(grids[ cur_index ])
 		pattern := Pattern(grids[ cur_index ])
 		indices : [4]i32 = { 0..<4 = -1 }
 		count_propagate := 0 
-		if(cur_index > 0) {
+		if(cur_index > 0 && is_collapsed(grids[ cur_index - 1]) == false )  {
 			grids[ cur_index - 1] &= Rules[ pattern ][Direction.Left]
-			indices[count_propagate] = cur_index- 1
+			indices[count_propagate] = cur_index - 1
 			count_propagate += 1
 		}
-		if(cur_index < NUM_GRID - 1) {
+		if(cur_index % (NUM_COL - 1) != 0 && is_collapsed(grids[ cur_index + 1]) == false) {
 			grids[ cur_index + 1] &= Rules[ pattern ][Direction.Right]
-			indices[count_propagate] = cur_index- 1
+			indices[count_propagate] = cur_index + 1
 			count_propagate += 1
 		}
-		if(cur_index < NUM_GRID - NUM_COL) {
+		if(cur_index < NUM_GRID - NUM_COL && is_collapsed(grids[ cur_index  + NUM_COL]) == false) {
 			grids[ cur_index + NUM_COL ] &= Rules[pattern][Direction.Down]
 			indices[count_propagate] = cur_index + NUM_COL
 			count_propagate += 1
 		}
-		if(cur_index >= NUM_COL) {
+		if(cur_index >= NUM_COL && is_collapsed(grids[ cur_index  - NUM_COL]) == false) {
 			grids[ cur_index - NUM_COL ] &= Rules[pattern][Direction.Up]
 			indices[count_propagate] = cur_index - NUM_COL
 			count_propagate += 1
 		}
 		
 		min_num : u8 = 255
+		min_index : i32 = 0
 		for idx in indices {
 			if(idx < 0) {
 				continue;
 			}
 			if ( min_num > grids[idx]) {
 				min_num = grids[idx]
-				cur_index = idx;
+				min_index = idx;
 			}
-		}		
+		}
+		cur_index = min_index		
 	}
 
 
