@@ -19,12 +19,14 @@ PATTERN_SIZE :: 50
 NUM_ROW :: 20
 NUM_COL :: 20
 
+Pattern :: enum {None = 0, Blank = 2, Up = 4, Down = 8, Left = 16, Right = 32 }
+Direction :: enum{Up, Down, Left, Right}
 
 is_collapsed :: proc( options : u8) -> bool {
 	return (options & (options - 1)) == 0
 }
 
-pick_pattern :: proc(options : u8) -> u8 {
+pick_one_pattern :: proc(options : u8) -> u8 {
 	arr : [5]u8
 	len : i32 = 0
 
@@ -50,8 +52,6 @@ calc_power_of_two :: proc( num : u8 ) -> u8 {
 	return power
 }
 
-Pattern :: enum {Blank = 2, Up = 4, Down = 8, Left = 16, Right = 32 }
-
 main :: proc() {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -67,17 +67,61 @@ main :: proc() {
 
 
 
-	rl.SetRandomSeed(u32(time.read_cycle_counter()))
-	cur_index := rl.GetRandomValue(0,NUM_ROW*NUM_COL - 1)
+	//Make Rules
+	AdjacentPatterns :: map[Direction]u8
+	blank := make(AdjacentPatterns)
+	defer delete(blank)
+	blank[Direction.Up] = u8(Pattern.Up)
+	blank[Direction.Down] = u8(Pattern.Down)
+	blank[Direction.Left] = u8(Pattern.Left)
+	blank[Direction.Right] = u8(Pattern.Right)
 
-	options := u8(Pattern.Blank) + u8(Pattern.Up) + u8(Pattern.Down) + u8(Pattern.Left) + u8(Pattern.Right)
+	down := make(AdjacentPatterns)
+	defer delete(down)
+	down[Direction.Up] = u8(Pattern.Up) | u8(Pattern.Blank)
+	down[Direction.Down] = u8(Pattern.Up) | u8(Pattern.Left) | u8(Pattern.Right)
+	down[Direction.Left] = u8(Pattern.Right) | u8(Pattern.Up)
+	down[Direction.Right] = u8(Pattern.Left) | u8(Pattern.Up)
+
+	left := make(AdjacentPatterns)
+	defer delete(left)
+	left[Direction.Up] = u8(Pattern.Down) | u8(Pattern.Right)
+	left[Direction.Down] = u8(Pattern.Right) | u8(Pattern.Up)
+	left[Direction.Left] = u8(Pattern.Right) | u8(Pattern.Up) | u8(Pattern.Down)
+	left[Direction.Right] = u8(Pattern.Right) | u8(Pattern.Blank)
+
+	right := make(AdjacentPatterns)
+	defer delete(right)
+	right[Direction.Up] = u8(Pattern.Down) | u8(Pattern.Left)
+	right[Direction.Down] = u8(Pattern.Left) | u8(Pattern.Up)
+	right[Direction.Left] = u8(Pattern.Blank) | u8(Pattern.Left)
+	right[Direction.Right] = u8(Pattern.Down) | u8(Pattern.Up) | u8(Pattern.Left)
+
+	up := make(AdjacentPatterns)
+	defer delete(up)
+	up[Direction.Up] = u8(Pattern.Down) | u8(Pattern.Left) | u8(Pattern.Right)
+	up[Direction.Down] = u8(Pattern.Down) | u8(Pattern.Blank)
+	up[Direction.Left] = u8(Pattern.Right) | u8(Pattern.Down)
+	up[Direction.Right] = u8(Pattern.Left) | u8(Pattern.Down)
+
+
+	Rules := make(map[Pattern]AdjacentPatterns)
+	defer delete(Rules)
+	Rules[Pattern.Blank] = blank
+	Rules[Pattern.Down] = down
+	Rules[Pattern.Left] = left
+	Rules[Pattern.Right] = right
+	Rules[Pattern.Up] = up
+
+	rl.SetRandomSeed(u32(time.read_cycle_counter()))
+	default_options := u8(Pattern.Blank) + u8(Pattern.Up) + u8(Pattern.Down) + u8(Pattern.Left) + u8(Pattern.Right)
+	cur_index := rl.GetRandomValue(NUM_ROW + 1,(NUM_ROW - 1) * (NUM_COL - 1) - 1)
 	grids : [NUM_ROW * NUM_COL]u8
-	for i := 0; i < NUM_ROW; i += 1 {
-		for j := 0; j < NUM_COL; j += 1{		
-			cur_index := rl.GetRandomValue(0,NUM_ROW*NUM_COL - 1)
-			grids[ j + i * NUM_ROW ] = pick_pattern(options)
-		}
-	} 
+	grids[ cur_index ] = pick_one_pattern(default_options)
+	grids[ cur_index - 1] &= Rules[ Pattern(grids[ cur_index ]) ][Direction.Left]
+	grids[ cur_index + 1] &= Rules[ Pattern(grids[ cur_index ]) ][Direction.Right]
+	grids[ cur_index + NUM_COL] &= Rules[Pattern(grids[ cur_index ])][Direction.Down]
+	grids[ cur_index - NUM_COL] &= Rules[Pattern(grids[ cur_index ])][Direction.Up]
 
 	canvas := rl.GenImageColor(SCREEN_WIDTH,SCREEN_HEIGHT,rl.WHITE)
 	srcRec :=rl.Rectangle { 0, 0, PATTERN_SIZE,PATTERN_SIZE };
@@ -86,10 +130,11 @@ main :: proc() {
 		for j := 0; j < NUM_COL; j += 1 {
 			image_index := calc_power_of_two(grids[ j + i * NUM_ROW ]) - 1
 			image := image_arr[image_index]
+			destRec := rl.Rectangle { f32(j * PATTERN_SIZE), f32(i * PATTERN_SIZE) , PATTERN_SIZE,PATTERN_SIZE }
 			rl.ImageDraw(&canvas,
 				image, 
 				srcRec, 
-				rl.Rectangle { f32(j * PATTERN_SIZE), f32(i * PATTERN_SIZE) , PATTERN_SIZE,PATTERN_SIZE },
+				destRec,
 				rl.WHITE)
 		}
 	}
