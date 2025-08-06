@@ -50,10 +50,10 @@ be + af - dg + ch
 ce + df + ag - bh  
 de - cf + bg + ah  
 
-a -b -c -d [e]  
-b  a -d  c [f]  
-c  d  a -b [g]  
-d -c  b  a [h]  
+[a -b -c -d] [e]  
+[b  a -d  c] [f]  
+[c  d  a -b] [g]  
+[d -c  b  a] [h]  
 
 (1,2,3,6)(0,1,0,0)  
 [ 1 -2 -3 -6]  [ 0 ]  [ -2 ]  
