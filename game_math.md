@@ -30,6 +30,7 @@ ki = j
 ij = k
 ji = -k
 
+## Quaternion Multiplication
 q1q2=
 ae + afi + agj + ahk +  
 bei - bf + bgk + bhj +  
