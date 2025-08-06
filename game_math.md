@@ -44,3 +44,31 @@ q1q2=
 (ah + bg - cf + de)k     //vector  
 
 q1q2 != q2q1
+
+ae - bf - cg - dh  
+be + af - dg + ch  
+ce + df + ag - bh  
+de - cf + bg + ah  
+
+a -b -c -d [e]  
+b  a -d  c [f]  
+c  d  a -b [g]  
+d -c  b  a [h]  
+
+(1,2,3,6)(0,1,0,0)  
+[ 1 -2 -3 -6]  [ 0 ]  
+[ 2  1 -6  3]  [ 1 ]  
+[ 3  6  1 -2]  [ 0 ]  
+[ 6 -3  2  1]  [ 0 ]  
+=
+[ -2 ]  
+[  1 ]  
+[  6 ]  
+[ -3 ]  
+
+
+
+
+
+
+
