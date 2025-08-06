@@ -66,6 +66,7 @@ i = (0,1,0,0)
 j = (0,0,1,0)  
 k = (0,0,0,1)  
 
+## Quaternion and 3D Rotations
 
 
 
